@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack Game with WebSocket</title>
+</head>
+
+<body>
+    <h1>Blackjack Game with WebSocket</h1>
+    <button id="start-game">Start Game</button>
+    <button id="hit">Hit</button>
+    <button id="stand">Stand</button>
+    <pre id="game-state"></pre>
+
+    <script>
+        const ws = new WebSocket("ws://127.0.0.1:9502");
+
+        ws.onopen = () => {
+            console.log("Connected to WebSocket server");
+
+            // 點擊 "Start Game" 按鈕，開始遊戲
+            document.getElementById('start-game').onclick = () => {
+                ws.send(JSON.stringify({ command: 'start' }));
+            };
+
+            // 點擊 "Hit" 按鈕，要牌
+            document.getElementById('hit').onclick = () => {
+                ws.send(JSON.stringify({ command: 'hit' }));
+            };
+
+            // 點擊 "Stand" 按鈕，停牌
+            document.getElementById('stand').onclick = () => {
+                ws.send(JSON.stringify({ command: 'stand' }));
+            };
+        };
+
+        ws.onmessage = (event) => {
+            const gameState = JSON.parse(event.data);
+            document.getElementById('game-state').textContent = JSON.stringify(gameState, null, 2);
+            console.log("Game State:", gameState);
+        };
+    </script>
+</body>
+
+</html>
