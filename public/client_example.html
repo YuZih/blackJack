@@ -5,35 +5,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blackjack Game with WebSocket</title>
+    <style>
+        /* 簡單的樣式控制 */
+        .hidden {
+            display: none;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 100px auto;
+            text-align: center;
+        }
+
+        input {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        #error-message {
+            color: red;
+            margin-top: 10px;
+        }
+
+        #game-state {
+            white-space: pre-wrap;
+            text-align: left;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Blackjack Game with WebSocket</h1>
-    <button id="hit">Hit</button>
-    <button id="stand">Stand</button>
-    <pre id="game-state"></pre>
+    <div class="container">
+        <!-- 登入介面 -->
+        <div id="login-container">
+            <h2>登入到 Blackjack 遊戲</h2>
+            <input type="text" id="username" placeholder="用戶名">
+            <input type="password" id="password" placeholder="密碼">
+            <button id="login-button">登入</button>
+            <div id="error-message"></div>
+        </div>
+
+        <!-- 遊戲介面 -->
+        <div id="game-container" class="hidden">
+            <h2>Blackjack 遊戲</h2>
+            <h4 id="player-name">Name:</h4>
+            <pre id="game-state"></pre>
+            <button id="hit-button">Hit</button>
+            <button id="stand-button">Stand</button>
+        </div>
+    </div>
 
     <script>
+        let username = '';
         const ws = new WebSocket("ws://127.0.0.1:9502");
 
         ws.onopen = () => {
-            console.log("Connected to WebSocket server");
-        };
-
-        document.getElementById('hit').onclick = () => {
-            ws.send('hit');
-        };
-
-        document.getElementById('stand').onclick = () => {
-            ws.send('stand');
+            console.log("已連接到 WebSocket 服務器");
         };
 
         ws.onmessage = (event) => {
-            document.getElementById('game-state').textContent = event.data;
+            const message = event.data;
+            console.log("收到消息：", message);
+
+            if (message.includes("登入成功")) {
+                document.getElementById('login-container').classList.add('hidden');
+                document.getElementById('game-container').classList.remove('hidden');
+                document.getElementById('player-name').textContent = `Name: ${username}`;
+
+                document.getElementById('game-state').textContent = message;
+            } else if (message.includes("登入失敗")) {
+                document.getElementById('error-message').textContent = "登入失敗，請檢查用戶名和密碼是否正確。";
+            } else {
+                // 取得當前的 game-state 內容
+                const currentContent = document.getElementById('game-state').textContent;
+
+                // 將新訊息追加到現有內容後面，並加上換行符
+                document.getElementById('game-state').textContent = currentContent + "\n" + "--------------------------" + "\n" + message;
+            }
         };
 
         ws.onclose = () => {
-            console.log("Disconnected from WebSocket server");
+            console.log("已從 WebSocket 服務器斷開連接");
+        };
+
+        document.getElementById('login-button').onclick = () => {
+            username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMessage = document.getElementById('error-message');
+
+            if (!username || !password) {
+                errorMessage.textContent = "請輸入用戶名和密碼。";
+                return;
+            }
+
+            const loginMessage = `login:${username}:${password}`;
+            ws.send(loginMessage);
+            errorMessage.textContent = "";
+            console.log("發送登入請求：", loginMessage);
+        };
+
+        document.getElementById('hit-button').onclick = () => {
+            ws.send('hit');
+            console.log("發送指令：hit");
+        };
+
+        document.getElementById('stand-button').onclick = () => {
+            ws.send('stand');
+            console.log("發送指令：stand");
         };
     </script>
 </body>

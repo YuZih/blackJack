@@ -1,16 +1,17 @@
 <?php
 
 // 聲明嚴格類型檢查
-declare(strict_types=1);
+declare (strict_types = 1);
 
 // 引入 Composer 自動加載文件
 require_once __DIR__ . '/vendor/autoload.php';
-// 引入 Game 和 RoomManager 類別
 
 // 引入 Swoole WebSocket Server 類別
-use Swoole\WebSocket\Server;
+use App\DBManager;
 // 引入 RoomManager 類別
 use App\RoomManager;
+// 引入 DBManager 類別
+use Swoole\WebSocket\Server;
 
 // 創建 WebSocket 服務器實例，監聽所有 IP 地址的 9502 端口
 $server = new Server("0.0.0.0", 9502);
@@ -18,56 +19,89 @@ $server = new Server("0.0.0.0", 9502);
 // 創建 RoomManager 實例來管理遊戲房間
 $roomManager = new RoomManager();
 
+// 獲取 DBManager 單例實例
+$server->db = DBManager::getInstance();
+
 // 當服務器啟動時觸發此事件
 $server->on("start", function () {
     echo "Swoole WebSocket Server is started at ws://0.0.0.0:9502\n";
 });
 
 // 當新的 WebSocket 連接建立時觸發此事件
-$server->on('open', function (Server $server, $request) use ($roomManager) {
-    $clientId = (string)$request->fd;
-    // 為新連接的客戶端創建一個新遊戲
-    $roomManager->createGame($clientId);
-    // 向客戶端發送歡迎消息
-    $server->push($request->fd, "Welcome to Blackjack! A new game has started.");
+$server->on('open', function (Server $server, $request) {
+    $clientId = (string) $request->fd;
+    echo "{$clientId}";
+    $server->push($request->fd, "歡迎！請使用以下指令進行註冊或登入：\n1. 註冊：'register:username:email:password'\n2. 登入：'login:username:password'");
 });
 
 // 當服務器收到客戶端消息時觸發此事件
 $server->on('message', function (Server $server, $frame) use ($roomManager) {
-    $clientId = (string)$frame->fd;
-    // 獲取客戶端對應的遊戲實例
-    $game = $roomManager->getGame($clientId);
+    $clientId = (string) $frame->fd;
+    $message = trim($frame->data);
+    echo $message;
+    $gameActionList = ['hit', 'stand'];
 
-    // 如果沒有找到活躍的遊戲，發送錯誤消息並返回
-    if (!$game) {
-        $server->push($frame->fd, "No active game found.");
-        return;
+    // 處理註冊請求
+    if (strpos($message, 'register:') === 0) {
+        $parts = explode(':', $message);
+        if (count($parts) === 4) {
+            $username = $parts[1];
+            $email = $parts[2];
+            $password = $parts[3];
+
+            // 使用 DBManager 創建新用戶
+            $newUserId = $server->db->createUser($username, $email, $password);
+            if ($newUserId) {
+                $server->push($frame->fd, "註冊成功。請使用 'login:username:password' 登入");
+            } else {
+                $server->push($frame->fd, "註冊失敗。請重試。");
+            }
+        } else {
+            $server->push($frame->fd, "無效的註冊格式。請使用 'register:username:email:password'");
+        }
     }
 
-    // 處理客戶端發送的消息
-    $message = strtolower(trim($frame->data));
+    // 處理登入請求
+    if (strpos($message, 'login:') === 0) {
+        $parts = explode(':', $message);
+        if (count($parts) === 3) {
+            $username = $parts[1];
+            $password = $parts[2];
 
-    // 根據客戶端的指令執行相應的遊戲操作
-    if ($message === 'hit') {
-        $response = $game->playerHit();
-    } elseif ($message === 'stand') {
-        $response = $game->dealerTurn() . $game->determineWinner();
-        // 遊戲結束後移除遊戲實例
-        $roomManager->removeGame($clientId);
-    } else {
-        $response = "Invalid command. Type 'hit' or 'stand'.";
+            // 使用 DBManager 驗證用戶
+            $userId = $server->db->verifyUser($username, $password);
+            if ($userId) {
+                if ($roomManager->isUserLogged($userId)) {
+                    $server->push($frame->fd, "已登入過，您無法同時登入不同頁面！");
+                    return;
+                }
+                // 開啟遊戲並顯示目前牌局
+                $response = $roomManager->createGame($clientId, $userId);
+                $server->push($frame->fd, $response);
+            } else {
+                $server->push($frame->fd, "登入失敗。請重試。");
+            }
+        } else {
+            $server->push($frame->fd, "無效的登入格式。請使用 'login:username:password'");
+        }
     }
 
-    // 將遊戲操作的結果發送回客戶端
-    $server->push($frame->fd, $response);
+    // 處理遊戲請求
+    $message = strtolower(trim($frame->data)); // 將玩家輸入的字串去頭去尾空格並轉換成小寫
+
+    if (in_array($message, $gameActionList)) {
+        $response = $roomManager->action($clientId, $message);
+        $server->push($frame->fd, $response);
+    }
 });
 
 // 當 WebSocket 連接關閉時觸發此事件
 $server->on('close', function ($server, $fd) use ($roomManager) {
-    $clientId = (string)$fd;
+    $clientId = (string) $fd;
     // 移除關閉連接的客戶端對應的遊戲實例
     $roomManager->removeGame($clientId);
     echo "Client {$fd} closed connection\n";
+    // todo: 移除登入中的玩家列表
 });
 
 // 啟動 WebSocket 服務器

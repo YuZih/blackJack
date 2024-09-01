@@ -1,10 +1,11 @@
 <?php
 
 // 聲明嚴格類型檢查
-declare(strict_types=1);
+declare (strict_types = 1);
 
 // 定義命名空間
 namespace App;
+
 // 定義遊戲類
 class Game
 {
@@ -32,10 +33,10 @@ class Game
         $this->playerHand->addCard($this->deck->drawCard());
 
         if ($this->playerHand->getTotalPoints() > 21) {
-            return "Player busts with hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n";
+            return "You bust with hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n";
         }
 
-        return "Player's hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n";
+        return "Hit! Your hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})";
     }
 
     public function dealerTurn(): string
@@ -53,11 +54,11 @@ class Game
         $dealerPoints = $this->dealerHand->getTotalPoints();
 
         if ($playerPoints > 21) {
-            return "Dealer wins!\n";
+            return "You lose!";
         } elseif ($dealerPoints > 21 || $playerPoints > $dealerPoints) {
-            return "Player wins!\n";
+            return "You win!";
         } elseif ($playerPoints < $dealerPoints) {
-            return "Dealer wins!\n";
+            return "You lose!";
         }
 
         return "It's a tie!\n";
@@ -65,7 +66,12 @@ class Game
 
     public function getGameState(): string
     {
-        return "Player's hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n" .
-               "Dealer's hand: {$this->dealerHand} (Total: {$this->dealerHand->getTotalPoints()})\n";
+        return "Your hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n" .
+            "Dealer's hand: {$this->dealerHand} (Total: {$this->dealerHand->getTotalPoints()})";
+    }
+
+    public function isBust(): bool
+    {
+        return $this->playerHand->getTotalPoints() > 21;
     }
 }
