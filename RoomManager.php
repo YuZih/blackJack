@@ -1,6 +1,6 @@
 <?php
 // 聲明嚴格類型檢查
-declare (strict_types = 1);
+declare(strict_types=1);
 // 定義命名空間
 namespace App;
 
@@ -10,7 +10,7 @@ namespace App;
 class RoomManager
 {
     /**
-     * 存儲所有活躍的遊戲實例
+     * 儲存所有活躍的遊戲實例
      * 鍵為客戶端ID，值為對應的Game對象
      */
     private array $games = [];

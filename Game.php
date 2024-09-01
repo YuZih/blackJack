@@ -5,104 +5,67 @@ declare(strict_types=1);
 
 // 定義命名空間
 namespace App;
-
-// 引入自動加載文件
-require __DIR__ . '/vendor/autoload.php';
-
 // 定義遊戲類
 class Game
 {
-    // 私有屬性
-    private Deck $deck;         // 牌組
-    private Hand $playerHand;   // 玩家手牌
-    private Hand $dealerHand;   // 莊家手牌
-    private bool $gameOver;     // 遊戲是否結束
+    private Deck $deck;
+    private Hand $playerHand;
+    private Hand $dealerHand;
 
-    // 構造函數
     public function __construct()
     {
         $this->deck = new Deck();
         $this->playerHand = new Hand();
         $this->dealerHand = new Hand();
-        $this->gameOver = false;
     }
 
-    // 開始遊戲方法
-    public function start(): array
+    public function start(): void
     {
-        // 初始化牌組和手牌
-        $this->deck = new Deck();
-        $this->playerHand = new Hand();
-        $this->dealerHand = new Hand();
-
-        // 發牌
         $this->playerHand->addCard($this->deck->drawCard());
         $this->playerHand->addCard($this->deck->drawCard());
         $this->dealerHand->addCard($this->deck->drawCard());
         $this->dealerHand->addCard($this->deck->drawCard());
-
-        // 返回遊戲狀態
-        return $this->getGameState();
     }
 
-    // 玩家要牌方法
-    public function playerHit(): array
+    public function playerHit(): string
     {
-        // 玩家抽一張牌
         $this->playerHand->addCard($this->deck->drawCard());
 
-        // 檢查是否爆牌
         if ($this->playerHand->getTotalPoints() > 21) {
-            $this->gameOver = true;
-            return $this->getGameState() + ['result' => 'Player busts! Dealer wins!'];
+            return "Player busts with hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n";
         }
 
-        // 返回遊戲狀態
-        return $this->getGameState();
+        return "Player's hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n";
     }
 
-    // 玩家停牌方法
-    public function playerStand(): array
+    public function dealerTurn(): string
     {
-        // 莊家按規則抽牌
         while ($this->dealerHand->getTotalPoints() < 17) {
             $this->dealerHand->addCard($this->deck->drawCard());
         }
 
-        // 遊戲結束，判斷勝負
-        $this->gameOver = true;
-        return $this->getGameState() + ['result' => $this->determineWinner()];
+        return "Dealer's hand: {$this->dealerHand} (Total: {$this->dealerHand->getTotalPoints()})\n";
     }
 
-    // 判斷勝負方法
-    private function determineWinner(): string
+    public function determineWinner(): string
     {
         $playerPoints = $this->playerHand->getTotalPoints();
         $dealerPoints = $this->dealerHand->getTotalPoints();
 
         if ($playerPoints > 21) {
-            return "Dealer wins!";
+            return "Dealer wins!\n";
         } elseif ($dealerPoints > 21 || $playerPoints > $dealerPoints) {
-            return "Player wins!";
+            return "Player wins!\n";
         } elseif ($playerPoints < $dealerPoints) {
-            return "Dealer wins!";
-        } else {
-            return "It's a tie!";
+            return "Dealer wins!\n";
         }
+
+        return "It's a tie!\n";
     }
 
-    // 獲取遊戲狀態方法
-    public function getGameState(): array
+    public function getGameState(): string
     {
-        return [
-            'player_hand' => (string)$this->playerHand,
-            'dealer_hand' => (string)$this->dealerHand,
-            'player_points' => $this->playerHand->getTotalPoints(),
-            'dealer_points' => $this->dealerHand->getTotalPoints(),
-            'game_over' => $this->gameOver
-        ];
+        return "Player's hand: {$this->playerHand} (Total: {$this->playerHand->getTotalPoints()})\n" .
+               "Dealer's hand: {$this->dealerHand} (Total: {$this->dealerHand->getTotalPoints()})\n";
     }
 }
-
-$game = new Game();
-$game->start();

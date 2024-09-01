@@ -9,7 +9,6 @@
 
 <body>
     <h1>Blackjack Game with WebSocket</h1>
-    <button id="start-game">Start Game</button>
     <button id="hit">Hit</button>
     <button id="stand">Stand</button>
     <pre id="game-state"></pre>
@@ -19,27 +18,22 @@
 
         ws.onopen = () => {
             console.log("Connected to WebSocket server");
+        };
 
-            // 點擊 "Start Game" 按鈕，開始遊戲
-            document.getElementById('start-game').onclick = () => {
-                ws.send(JSON.stringify({ command: 'start' }));
-            };
+        document.getElementById('hit').onclick = () => {
+            ws.send('hit');
+        };
 
-            // 點擊 "Hit" 按鈕，要牌
-            document.getElementById('hit').onclick = () => {
-                ws.send(JSON.stringify({ command: 'hit' }));
-            };
-
-            // 點擊 "Stand" 按鈕，停牌
-            document.getElementById('stand').onclick = () => {
-                ws.send(JSON.stringify({ command: 'stand' }));
-            };
+        document.getElementById('stand').onclick = () => {
+            ws.send('stand');
         };
 
         ws.onmessage = (event) => {
-            const gameState = JSON.parse(event.data);
-            document.getElementById('game-state').textContent = JSON.stringify(gameState, null, 2);
-            console.log("Game State:", gameState);
+            document.getElementById('game-state').textContent = event.data;
+        };
+
+        ws.onclose = () => {
+            console.log("Disconnected from WebSocket server");
         };
     </script>
 </body>
